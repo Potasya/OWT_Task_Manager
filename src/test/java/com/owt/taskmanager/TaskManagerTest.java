@@ -45,4 +45,48 @@ public class TaskManagerTest {
         assertEquals(2, processes.size());
     }
 
+    @Test
+    public void testKillNonexistentProcess() {
+        TaskManager taskManager = new TaskManager(3, new DefaultAddProcessStrategy());
+        taskManager.add(new Process("1", Priority.LOW));
+        taskManager.add(new Process("2", Priority.MEDIUM));
+        taskManager.add(new Process("3", Priority.HIGH));
+
+        // Nonexistent PID
+        taskManager.kill(new KillByPidStrategy("4"));
+        List<Process> processes = taskManager.list(new ListByPriorityStrategy());
+
+        // No process should be killed
+        assertEquals(3, processes.size());
+    }
+
+    @Test
+    public void testAddProcessToFifoWithCapacity() {
+        TaskManager taskManager = new TaskManager(3, new FIFOAddProcessStrategy());
+        assertTrue(taskManager.add(new Process("1", Priority.LOW)));
+        assertTrue(taskManager.add(new Process("2", Priority.MEDIUM)));
+        assertTrue(taskManager.add(new Process("3", Priority.HIGH)));
+
+        // This should succeed
+        assertTrue(taskManager.add(new Process("4", Priority.LOW)));
+        List<Process> processes = taskManager.list(new ListByPriorityStrategy());
+
+        // Process "1" should have been replaced
+        assertEquals(3, processes.size());
+        assertFalse(processes.stream().anyMatch(p -> p.getPid().equals("1")));
+    }
+
+    @Test
+    public void testKillAllProcesses() {
+        TaskManager taskManager = new TaskManager(3, new DefaultAddProcessStrategy());
+        taskManager.add(new Process("1", Priority.LOW));
+        taskManager.add(new Process("2", Priority.MEDIUM));
+        taskManager.add(new Process("3", Priority.HIGH));
+        taskManager.kill(new KillAllStrategy());
+        List<Process> processes = taskManager.list(new ListByPriorityStrategy());
+
+        // All processes should be killed
+        assertTrue(processes.isEmpty());
+    }
+
 }
